@@ -5,8 +5,15 @@
     "@mui/icons-material": "^7.0.1",
     "@mui/material": "^7.0.1",
     "@mui/x-date-pickers": "^8.1.0",
+    "@stomp/stompjs": "^7.1.1",
     "axios": "^1.8.4",
     "date-fns": "^4.1.0",
-    "react-router-dom": "^7.5.0"
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
+    "moment": "^2.30.1",
+    "react-big-calendar": "^1.18.0",
+    "react-calendar": "^5.1.0",
+    "react-router-dom": "^7.5.0",
+    "sockjs-client": "^1.6.1"
   }
 }

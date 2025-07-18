@@ -3,6 +3,7 @@ package com.project.service.impl;
 import com.project.model.User;
 import com.project.repository.UserRepository;
 import com.project.service.UserService;
+import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -15,6 +16,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User registerUser(User user){
+        String hashedPassword = BCrypt.hashpw(user.getPassword(), BCrypt.gensalt());
+        user.setPassword(hashedPassword);
         return userRepository.save(user);
     }
 
@@ -29,7 +32,13 @@ public class UserServiceImpl implements UserService {
         if (checkExistingUser.isPresent()) {
             User currentUser = checkExistingUser.get();
             currentUser.setUsername(user.getUsername());
-            currentUser.setPassword(user.getPassword());
+
+            // Only update password if a new one was provided
+            if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+                String hashedPassword = BCrypt.hashpw(user.getPassword(), BCrypt.gensalt());
+                currentUser.setPassword(hashedPassword);
+            }
+
             currentUser.setEmail(user.getEmail());
             currentUser.setUserType(user.getUserType());
             return userRepository.save(currentUser);
@@ -45,7 +54,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User authenticate(String email, String password){
         User user = userRepository.findByEmail(email);
-        if(user != null && user.getPassword().equals(password)){
+        if (user != null && BCrypt.checkpw(password, user.getPassword())) {
             return user;
         }
         return null;

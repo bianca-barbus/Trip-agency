@@ -1,7 +1,12 @@
 package com.project.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.project.model.User;
 import com.project.service.UserService;
+import com.project.model.ActivityLog;
+import com.project.repository.ActivityLogRepository;
+import com.project.websockets.ActivityNotifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,9 +18,14 @@ import java.util.List;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
+    private final ActivityLogRepository activityLogRepository;
 
-    public UserController(UserService userService) {
+    @Autowired
+    private ActivityNotifier notifier;
+
+    public UserController(UserService userService, ActivityLogRepository activityLogRepository) {
         this.userService = userService;
+        this.activityLogRepository = activityLogRepository;
     }
 
     @PostMapping("/register")
@@ -27,8 +37,34 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<User> loginUser(@RequestBody User user) {
         User authenticatedUser = userService.authenticate(user.getUsername(), user.getPassword());
+
+        if (authenticatedUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        ActivityLog log = new ActivityLog(
+                authenticatedUser.getUserId().toString(),
+                authenticatedUser.getUsername(),
+                authenticatedUser.getUserType(),
+                "LOGIN"
+        );
+
+        activityLogRepository.save(log);
+        try {
+            notifier.broadcast(log);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
         return ResponseEntity.ok(authenticatedUser);
     }
+
+    @GetMapping("/activity-logs")
+    public ResponseEntity<List<ActivityLog>> getActivityLogs() {
+        List<ActivityLog> logs = (List<ActivityLog>) activityLogRepository.findAll();
+        return ResponseEntity.ok(logs);
+    }
+
 
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {

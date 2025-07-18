@@ -6,11 +6,27 @@ import api from '../services/api';
 const Login = () => {
     const [formData, setFormData] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
+    const [validationErrors, setValidationErrors] = useState({});
     const navigate = useNavigate();
     const location = useLocation();
 
+    const validate = () => {
+        const errors = {};
+        if (!formData.username.trim()) errors.username = 'Username is required';
+        else if (formData.username.trim().length < 3) errors.username = 'Username must be at least 3 characters';
+
+        if (!formData.password) errors.password = 'Password is required';
+        else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        if (!validate()) return;
+
         try {
             const response = await api.post('/users/login', formData);
             localStorage.setItem('currentUser', JSON.stringify(response.data));
@@ -72,6 +88,8 @@ const Login = () => {
                         autoFocus
                         value={formData.username}
                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        error={!!validationErrors.username}
+                        helperText={validationErrors.username}
                     />
                     <TextField
                         margin="normal"
@@ -81,6 +99,8 @@ const Login = () => {
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        error={!!validationErrors.password}
+                        helperText={validationErrors.password}
                     />
                     <Button
                         type="submit"

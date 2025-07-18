@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Container, Box, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField,
-    FormControl, InputLabel, Select, MenuItem, CircularProgress, Paper, Stack, Table, TableHead, TableBody, TableRow, TableCell
+    FormControl, InputLabel, Select, MenuItem, CircularProgress, Grid, Paper, Stack, Table, TableHead, TableBody, TableRow, TableCell, Fab
 } from '@mui/material';
+import {jsPDF } from 'jspdf';
+import {autoTable} from 'jspdf-autotable';
+import ChatIcon from '@mui/icons-material/Chat';
+import CloseIcon from '@mui/icons-material/Close';
+import Chat from './Chat.jsx'
 import api from '../services/api';
 
 const AdminDashboard = () => {
@@ -13,6 +18,9 @@ const AdminDashboard = () => {
     const [trips, setTrips] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [showActivityLogs, setShowActivityLogs] = useState(false);
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
     const [openAddDialog, setOpenAddDialog] = useState(false);
     const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
@@ -25,6 +33,7 @@ const AdminDashboard = () => {
         fetchUsers();
         fetchTrips();
         fetchCategories();
+        fetchActivityLogs();
     }, []);
 
     const fetchUsers = async () => {
@@ -51,6 +60,15 @@ const AdminDashboard = () => {
             setCategories(response.data);
         } catch (error) {
             console.error("Error fetching categories:", error);
+        }
+    };
+
+    const fetchActivityLogs = async () => {
+        try {
+            const response = await api.get('/users/activity-logs');
+            setActivityLogs(response.data);
+        } catch (error) {
+            console.error("Error fetching activity logs:", error);
         }
     };
 
@@ -100,11 +118,53 @@ const AdminDashboard = () => {
         setShowUsers(!showUsers);
     };
 
+    const toggleActivityLogs = () => {
+        setShowActivityLogs(!showActivityLogs);
+    };
+
+    const exportActivityLogsToPDF = () => {
+        try {
+            const doc = new jsPDF();
+
+            const tableColumn = ["ID", "Username", "Role", "Action", "Timestamp"];
+            const tableRows = activityLogs.map(log => [
+                String(log.id || 'N/A'),
+                String(log.username || 'N/A'),
+                String(log.userType || 'N/A'),
+                String(log.action || 'N/A'),
+                log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'
+            ]);
+
+            doc.text("Activity Logs Report", 14, 15);
+
+            autoTable(doc,{
+                head: [tableColumn],
+                body: tableRows,
+                startY: 20,
+                styles: {
+                    overflow: 'linebreak',
+                    cellPadding: 2,
+                    fontSize: 8
+                },
+                columnStyles: {
+                    0: { cellWidth: 15 },
+                    4: { cellWidth: 30 }
+                }
+            });
+
+            doc.save(`activity_logs_${new Date().toISOString().slice(0,10)}.pdf`);
+        } catch (error) {
+            console.error("PDF generation failed:", error);
+            alert("Failed to generate PDF. Please check console for details.");
+        }
+    };
+
+
     return (
         <Box
             sx={{
                 minHeight: '100vh',
-                width: '100%',
+                width: '100vw',
                 background: 'linear-gradient(to right, #a1c4fd, #c2e9fb)',
                 display: 'flex',
                 justifyContent: 'center',
@@ -135,6 +195,80 @@ const AdminDashboard = () => {
                     <Button variant="contained" onClick={toggleView}>
                         {showUsers ? 'View Trips' : 'View Users'}
                     </Button>
+
+                    <Grid container spacing={4} sx={{ mb: 3 }}>
+                        <Grid item xs={4}>
+                            <Paper sx={{ p: 2 }}>
+                                <Typography variant="h6" color="primary">Total Users</Typography>
+                                <Typography variant="h4">{users.length}</Typography>
+                            </Paper>
+                        </Grid>
+                        <Grid item xs={4}>
+                            <Paper sx={{ p: 2 }}>
+                                <Typography variant="h6" color="primary">Total Trips</Typography>
+                                <Typography variant="h4">{trips.length}</Typography>
+                            </Paper>
+                        </Grid>
+                        <Grid item xs={4}>
+                            <Paper sx={{ p: 2 }}>
+                                <Typography variant="h6" color="primary">Activity Logs</Typography>
+                                <Typography variant="h4">{activityLogs.length}</Typography>
+                            </Paper>
+                        </Grid>
+                    </Grid>
+
+                    {/* Toggle Button for Activity Logs */}
+                    <Button
+                        variant="outlined"
+                        onClick={toggleActivityLogs}
+                        sx={{ mt: 2, mb: 2 }}
+                    >
+                        {showActivityLogs ? 'Hide Activity Logs' : 'Show Activity Logs'}
+                    </Button>
+
+                    <Button variant="contained" color="secondary" onClick={() => exportActivityLogsToPDF()} sx={{ mb: 2 }}>
+                        Export Logs as PDF
+                    </Button>
+
+
+                    {/* Show Activity Logs */}
+                    {showActivityLogs && (
+                        <Box sx={{ mt: 4, mb: 4 }}>
+                            <Typography variant="h5" gutterBottom>Activity Logs</Typography>
+                            {activityLogs.length > 0 ? (
+                                <Paper sx={{ overflowX: 'auto' }}>
+                                    <Table sx={{ minWidth: 650 }} aria-label="activity logs table">
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell><strong>ID</strong></TableCell>
+                                                <TableCell><strong>Username</strong></TableCell>
+                                                <TableCell><strong>Role</strong></TableCell>
+                                                <TableCell><strong>Action</strong></TableCell>
+                                                <TableCell><strong>Timestamp</strong></TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {activityLogs.map((log) => (
+                                                <TableRow key={log.id}>
+                                                    <TableCell>{log.id}</TableCell>
+                                                    <TableCell>{log.username || 'N/A'}</TableCell>
+                                                    <TableCell>{log.userType || 'N/A'}</TableCell>
+                                                    <TableCell>{log.action || 'N/A'}</TableCell>
+                                                    <TableCell>
+                                                        {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </Paper>
+                            ) : (
+                                <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+                                    No activity logs available
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
 
                     {showUsers ? (
                         <>
@@ -273,6 +407,39 @@ const AdminDashboard = () => {
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                <Fab
+                    color="primary"
+                    onClick={() => setIsChatOpen(!isChatOpen)}
+                    sx={{
+                        position: 'fixed',
+                        bottom: 20,
+                        right: 20,
+                        zIndex: 1300,
+                    }}
+                >
+                    {isChatOpen ? <CloseIcon /> : <ChatIcon />}
+                </Fab>
+
+                {isChatOpen && (
+                    <Box
+                        sx={{
+                            position: 'fixed',
+                            bottom: 80,
+                            right: 20,
+                            width: 320,
+                            height: 420,
+                            zIndex: 1200,
+                            backgroundColor: 'white',
+                            borderRadius: 2,
+                            boxShadow: 3,
+                            overflow: 'hidden',
+                        }}
+                    >
+                        <Chat username="Admin" />
+                    </Box>
+                )}
+
 
             </Paper>
         </Box>

@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
     Container, Typography, Button, Box, Grid, Card, CardContent,
     Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-    Snackbar, Alert, Paper, Rating, Stack
+    Snackbar, Alert, Paper, Rating, Stack, Fab
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import TripFilters from './Filter';
+import TripCalendar from './TripCalendar.jsx';
+import Chat from './Chat.jsx'
 import api from '../services/api';
+import CloseIcon from "@mui/icons-material/Close";
+import ChatIcon from "@mui/icons-material/Chat";
+import {Calendar} from "react-big-calendar";
 
 const ClientDashboard = () => {
     const [activeTab, setActiveTab] = useState('trips');
@@ -26,6 +31,8 @@ const ClientDashboard = () => {
     const [paymentAmount, setPaymentAmount] = useState(0);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
     const [categories, setCategories] = useState([]);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -91,9 +98,11 @@ const ClientDashboard = () => {
                 numberOfPeople: selectedNumberOfPeople,
                 totalPrice: selectedTrip.price * selectedNumberOfPeople,
                 status: 'PENDING',
-                tripId: selectedTrip.id,
-                userId: currentUser.userId
+                trip: { id: selectedTrip.id },
+                user: { userId: currentUser.userId }
             };
+            console.log('Booking Payload:', bookingData);
+
 
             await api.post('/bookings', bookingData);
             showNotification('Booking confirmed!', 'success');
@@ -365,6 +374,10 @@ const ClientDashboard = () => {
                                 </Grid>
                             ))}
                         </Grid>
+                        <Paper sx={{ mt: 4, p: 2 }}>
+                            <Typography variant="h6" gutterBottom>Trip Calendar</Typography>
+                            <TripCalendar />
+                        </Paper>
                     </>
                 ) : (
                     <Grid container spacing={3}>
@@ -431,6 +444,40 @@ const ClientDashboard = () => {
                 {renderBookingDialog()}
                 {renderPaymentDialog()}
                 {renderReviewsDialog()}
+
+
+                <Fab
+                    color="primary"
+                    onClick={() => setIsChatOpen(!isChatOpen)}
+                    sx={{
+                        position: 'fixed',
+                        bottom: 20,
+                        right: 20,
+                        zIndex: 1300,
+                    }}
+                >
+                    {isChatOpen ? <CloseIcon /> : <ChatIcon />}
+                </Fab>
+
+                {isChatOpen && (
+                    <Box
+                        sx={{
+                            position: 'fixed',
+                            bottom: 80,
+                            right: 20,
+                            width: 320,
+                            height: 420,
+                            zIndex: 1200,
+                            backgroundColor: 'white',
+                            borderRadius: 2,
+                            boxShadow: 3,
+                            overflow: 'hidden',
+                        }}
+                    >
+                        <Chat username={currentUser.username}  />
+                    </Box>
+                )}
+
 
                 {/* Snackbar */}
                 <Snackbar open={notification.open} autoHideDuration={6000} onClose={() => setNotification({ ...notification, open: false })}>

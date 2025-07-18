@@ -7,10 +7,36 @@ const Register = () => {
     const [formData, setFormData] = useState({ username: '', password: '', email: '', userType: 'CLIENT' });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [validationErrors, setValidationErrors] = useState({});
     const navigate = useNavigate();
+
+    const validate = () => {
+        const errors = {};
+
+        if (!formData.username.trim()) errors.username = 'Username is required';
+        else if (formData.username.trim().length < 3) errors.username = 'Username must be at least 3 characters';
+
+        if (!formData.email.trim()) errors.email = 'Email is required';
+        else {
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email)) errors.email = 'Email is not valid';
+        }
+
+        if (!formData.password) errors.password = 'Password is required';
+        else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        setSuccess(false);
+
+        if (!validate()) return;
+
         try {
             await api.post('/users/register', formData);
             setSuccess(true);
@@ -75,6 +101,8 @@ const Register = () => {
                         name="username"
                         value={formData.username}
                         onChange={handleChange}
+                        error={!!validationErrors.username}
+                        helperText={validationErrors.username}
                     />
                     <TextField
                         margin="normal"
@@ -85,6 +113,8 @@ const Register = () => {
                         type="email"
                         value={formData.email}
                         onChange={handleChange}
+                        error={!!validationErrors.email}
+                        helperText={validationErrors.email}
                     />
                     <TextField
                         margin="normal"
@@ -95,8 +125,10 @@ const Register = () => {
                         type="password"
                         value={formData.password}
                         onChange={handleChange}
+                        error={!!validationErrors.password}
+                        helperText={validationErrors.password}
                     />
-                    <FormControl fullWidth margin="normal">
+                    <FormControl fullWidth margin="normal" error={!!validationErrors.userType}>
                         <InputLabel>Account Type</InputLabel>
                         <Select
                             name="userType"

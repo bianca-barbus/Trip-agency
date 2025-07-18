@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<booking>
+  <bookingId>null</bookingId>
+  <status>PENDING</status>
+  <numberOfPeople>2</numberOfPeople>
+  <totalPrice>4000.0</totalPrice>
+</booking>
